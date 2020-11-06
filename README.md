@@ -1,1 +1,1 @@
-Be carefull when close the program
+Be carefull when closing the program
