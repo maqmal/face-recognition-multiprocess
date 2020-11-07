@@ -4,7 +4,7 @@ from datetime import datetime
 from multiprocessing import Process, Queue, Value, Lock, Array
 
 video_capture = cv2.VideoCapture(0)
-image_dir = '/'
+image_dir = 'dataset/'
 image_array = []
 registered_face = []
 known_face_encodings = []
@@ -13,9 +13,8 @@ if os.path.exists(image_dir) and os.path.isdir(image_dir):
     if not os.listdir(image_dir):
         print("IMAGE DIRECTORY NOT FOUND")
     else:
-        for file in glob.glob("*.jpg"):
-            new = file
-            image_array.append(new)
+        for file in glob.glob(os.path.join(image_dir,"*.jpg")):
+            image_array.append(file)
 
 for i in range(len(image_array)):
     registered_face.append(face_recognition.load_image_file(image_array[i]))
@@ -51,8 +50,13 @@ def grab_display(run_flag, send_frame_queue, receive_location_queue,receive_name
         faces = face_cascade.detectMultiScale(gray, 1.1, 5)
         for_draw = name
         for (x,y,w,h) in faces:
-            cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
-            cv2.putText(frame, for_draw, (x,y-10), font, 0.7, (255, 255, 255), 1)
+            if for_draw=="Unknown":
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255),2)
+                cv2.putText(frame, "Searching...", (x,y-10), font, 0.7, (0, 0, 255), 1)
+            else:
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+                cv2.putText(frame, for_draw, (x,y-10), font, 0.7, (255, 255, 255), 1)
+            
 
         mask = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
