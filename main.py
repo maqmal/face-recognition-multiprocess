@@ -30,7 +30,7 @@ known_face_names = [
 
 face_locations = []
 face_encodings = []
-face_names = []
+
 def grab_display(run_flag, send_frame_queue, receive_location_queue,receive_name_queue, p_start_turn):
     last_location_receive_time = 0
     startTime_ms = 0
@@ -38,27 +38,22 @@ def grab_display(run_flag, send_frame_queue, receive_location_queue,receive_name
     start_datetime = datetime.now()
     face_locations_shared = sharedmem.empty(face_locations)
     font = cv2.FONT_HERSHEY_DUPLEX
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    for_draw=""
-    name="Unknown"
+    for_draw = ""
+    bentuk = []
+    arr_nama = []
     while (run_flag.value):
         _, frame = video_capture.read()
         small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-        small_frame_clone = frame.copy()
-        
-        gray = cv2.cvtColor(small_frame_clone, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, 1.1, 5)
-        for_draw = name
-        for (x,y,w,h) in faces:
-            if for_draw=="Unknown":
-                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255),2)
-                cv2.putText(frame, "Searching...", (x,y-10), font, 0.7, (0, 0, 255), 1)
-            else:
-                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
-                cv2.putText(frame, for_draw, (x,y-10), font, 0.7, (255, 255, 255), 1)
-            
-
         mask = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+        for (top, right, bottom, left), name in zip(bentuk, arr_nama):
+            top *= 4
+            right *= 4
+            bottom *= 4
+            left *= 4
+
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            cv2.putText(frame, name, (left + 6, top - 6), font, 1.0, (255, 255, 255), 1)
 
         current_time = datetime.now()
         delta_time = current_time-start_datetime
@@ -69,14 +64,16 @@ def grab_display(run_flag, send_frame_queue, receive_location_queue,receive_name
             start_datetime = current_time # Update last send to queue time
             send_frame_queue.put(mask) # Put mask in queue
         #Check if receive_location_queue is not empty
+        
         if ((not receive_location_queue.empty())):
             last_location_receive_time = time.time()
             face_locations_shared = receive_location_queue.get()
-            name = receive_name_queue.get()
+            face_names = receive_name_queue.get()
             
             if ((time.time()-last_location_receive_time) < 0.5):
                 # Display the results
-                for_draw = name                    
+                bentuk = face_locations_shared
+                arr_nama = face_names
 
         # Display the resulting image
         cv2.imshow('Video', frame)
@@ -101,6 +98,7 @@ def process_frame_1(run_flag, send_frame_queue, receive_location_queue,receive_n
             face_locations = face_recognition.face_locations(mask)
             face_encodings = face_recognition.face_encodings(mask, face_locations)
             name = "Unknown"
+            face_names=[]
             for face_encoding in face_encodings:
                 # See if the face is a match for the known face(s)
                 matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
@@ -112,20 +110,21 @@ def process_frame_1(run_flag, send_frame_queue, receive_location_queue,receive_n
                     name = known_face_names[best_match_index]
 
                 face_names.append(name)
-            
             receive_location_queue.put(face_locations)
-            receive_name_queue.put(name)
+            receive_name_queue.put(face_names)
         else:
             time.sleep(0.03)
             currentTime = datetime.now()
             currentTime_ms = currentTime.second *1000 + currentTime.microsecond/1000
+        
+        
     print("Quiting Processor 1")
 
 def process_frame_2(run_flag, send_frame_queue, receive_location_queue,receive_name_queue, p_start_turn):
     while (run_flag.value):
         startTime = datetime.now()
         startTime_ms = startTime.second *1000 + startTime.microsecond/1000
-        
+
         if ((not send_frame_queue.empty()) and (p_start_turn.value == 2)):
             mask = send_frame_queue.get() # Grab a frame
             p_start_turn.value = 3 
@@ -133,6 +132,7 @@ def process_frame_2(run_flag, send_frame_queue, receive_location_queue,receive_n
             face_locations = face_recognition.face_locations(mask)
             face_encodings = face_recognition.face_encodings(mask, face_locations)
             name = "Unknown"
+            face_names=[]
             for face_encoding in face_encodings:
                 # See if the face is a match for the known face(s)
                 matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
@@ -144,20 +144,22 @@ def process_frame_2(run_flag, send_frame_queue, receive_location_queue,receive_n
                     name = known_face_names[best_match_index]
 
                 face_names.append(name)
-            
             receive_location_queue.put(face_locations)
-            receive_name_queue.put(name)
+            receive_name_queue.put(face_names)
         else:
             time.sleep(0.03)
             currentTime = datetime.now()
             currentTime_ms = currentTime.second *1000 + currentTime.microsecond/1000
+        
+        
+        
     print("Quiting Processor 2")
 
 def process_frame_3(run_flag, send_frame_queue, receive_location_queue,receive_name_queue, p_start_turn):
     while (run_flag.value):
         startTime = datetime.now()
         startTime_ms = startTime.second *1000 + startTime.microsecond/1000
-        
+
         if ((not send_frame_queue.empty()) and (p_start_turn.value == 3)):
             mask = send_frame_queue.get() # Grab a frame
             p_start_turn.value = 4 
@@ -165,6 +167,7 @@ def process_frame_3(run_flag, send_frame_queue, receive_location_queue,receive_n
             face_locations = face_recognition.face_locations(mask)
             face_encodings = face_recognition.face_encodings(mask, face_locations)
             name = "Unknown"
+            face_names=[]
             for face_encoding in face_encodings:
                 # See if the face is a match for the known face(s)
                 matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
@@ -176,20 +179,22 @@ def process_frame_3(run_flag, send_frame_queue, receive_location_queue,receive_n
                     name = known_face_names[best_match_index]
 
                 face_names.append(name)
-            
             receive_location_queue.put(face_locations)
-            receive_name_queue.put(name)
+            receive_name_queue.put(face_names)
         else:
             time.sleep(0.03)
             currentTime = datetime.now()
             currentTime_ms = currentTime.second *1000 + currentTime.microsecond/1000
+        
+        
+        
     print("Quiting Processor 3")
 
 def process_frame_4(run_flag, send_frame_queue, receive_location_queue,receive_name_queue, p_start_turn):
     while (run_flag.value):
         startTime = datetime.now()
         startTime_ms = startTime.second *1000 + startTime.microsecond/1000
-        
+
         if ((not send_frame_queue.empty()) and (p_start_turn.value == 4)):
             mask = send_frame_queue.get() # Grab a frame
             p_start_turn.value = 1 
@@ -197,6 +202,7 @@ def process_frame_4(run_flag, send_frame_queue, receive_location_queue,receive_n
             face_locations = face_recognition.face_locations(mask)
             face_encodings = face_recognition.face_encodings(mask, face_locations)
             name = "Unknown"
+            face_names=[]
             for face_encoding in face_encodings:
                 # See if the face is a match for the known face(s)
                 matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
@@ -208,13 +214,14 @@ def process_frame_4(run_flag, send_frame_queue, receive_location_queue,receive_n
                     name = known_face_names[best_match_index]
 
                 face_names.append(name)
-            
             receive_location_queue.put(face_locations)
-            receive_name_queue.put(name)
+            receive_name_queue.put(face_names)
         else:
             time.sleep(0.03)
             currentTime = datetime.now()
             currentTime_ms = currentTime.second *1000 + currentTime.microsecond/1000
+        
+        
     print("Quiting Processor 4")
 
 
