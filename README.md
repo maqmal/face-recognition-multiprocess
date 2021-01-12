@@ -1,1 +1,1 @@
-Multiprocessing make the video feed get higher fps but the face recognition process are still slow.
+Multiprocessing makes video fps higher but the face recognition process are still slow.
